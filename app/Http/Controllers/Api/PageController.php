@@ -10,11 +10,13 @@ use App\Http\Resources\ProductResource;
 use App\Http\Resources\ProfileResource;
 use App\Models\Cart;
 use App\Models\Category;
+use App\Models\Contact;
 use App\Models\Order;
 use App\Models\OrderList;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 
 class PageController extends Controller
 {
@@ -22,11 +24,20 @@ class PageController extends Controller
     {
         $productList;
         if (!empty($request->category)) {
-            $products = Product::where('category_id', $request->category)->get();
+            $products = Product::where('category_id', $request->category);
+            if ($request->sorting) {
+                $products = $products->orderBy('updated_at', $request->sorting);
+            }
+            $products = $products->get();
             $productList = ProductResource::collection($products);
         } else {
-            $products = Product::get();
-            $productList = ProductResource::collection($products);
+            if ($request->sorting) {
+                $products = Product::orderBy('id', $request->sorting)->get();
+                $productList = ProductResource::collection($products);
+            } else {
+                $products = Product::orderBy('id', 'desc')->get();
+                $productList = ProductResource::collection($products);
+            }
         }
 
         $user = Auth::user();
@@ -76,12 +87,18 @@ class PageController extends Controller
         $productInfo = new ProductResource($product);
         if (!empty($product)) {
             if (!empty($request->quantity)) {
-                Cart::create([
-                    'user_id' => $user->id,
-                    'product_id' => $product->id,
-                    'quantity' => $request->quantity,
-                    'price' => $product->price,
-                ]);
+                $cart = Cart::where('product_id', $id)->where('user_id', $user->id)->first();
+                if (!empty($cart)) {
+                    $cart->quantity = $cart->quantity + $request->quantity;
+                    $cart->update();
+                } else {
+                    Cart::create([
+                        'user_id' => $user->id,
+                        'product_id' => $product->id,
+                        'quantity' => $request->quantity,
+                        'price' => $product->price,
+                    ]);
+                }
                 return response()->json([
                     'status' => 1,
                     'message' => 'Add to cart success.',
@@ -100,6 +117,33 @@ class PageController extends Controller
         return response()->json([
             'status' => 0,
             'message' => 'Unknown product',
+        ]);
+    }
+
+    public function addQty($id)
+    {
+        $cart = Cart::find($id);
+        $cart->quantity = $cart->quantity + 1;
+        $cart->update();
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'success',
+        ]);
+    }
+
+    public function decQty($id)
+    {
+        $cart = Cart::find($id);
+        if ($cart->quantity == 1) {
+            return;
+        }
+        $cart->quantity = $cart->quantity - 1;
+        $cart->update();
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'success',
         ]);
     }
 
@@ -122,13 +166,15 @@ class PageController extends Controller
         return response([
             'status' => 1,
             'message' => 'success',
+            'deli_charge' => '3000 Kyats',
             'data' => $cartList,
         ]);
     }
 
     public function removeCart($id)
     {
-        $cart = Cart::find($id);
+        $user = Auth::user();
+        $cart = Cart::where('user_id', $user->id)->where('product_id', $id)->first();
         if (!empty($cart)) {
             $cart->delete();
             return response()->json([
@@ -136,7 +182,7 @@ class PageController extends Controller
                 'message' => 'A product was remove from cart',
             ]);
         }
-        return response()->josn([
+        return response()->json([
             'status' => 0,
             'message' => 'Unknown product',
         ]);
@@ -175,12 +221,43 @@ class PageController extends Controller
 
     public function order()
     {
-        $orders = Order::where('user_id', Auth::user()->id)->get();
+        $orders = Order::orderBy('updated_at', 'desc')->where('user_id', Auth::user()->id)->get();
         $orderList = OrderResource::collection($orders);
         return response()->json([
             'status' => 1,
             'message' => 'success',
             'data' => $orderList,
+        ]);
+    }
+
+    public function contact(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required',
+            'email' => 'required|email',
+            'phone' => 'required|min:5|max:11',
+            'message' => 'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 0,
+                'message' => 'fail',
+                'data' => $validator->errors(),
+            ]);
+        }
+
+        $contact = new Contact;
+        $contact->name = $request->name;
+        $contact->phone = $request->phone;
+        $contact->email = $request->email;
+        $contact->message = $request->message;
+        $contact->save();
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'success',
+            'data' => $contact,
         ]);
     }
 }

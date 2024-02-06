@@ -20,7 +20,7 @@ class ProductResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'image' => $this->image,
-            'price' => $this->price . ' MMK',
+            'price' => number_format($this->price) . ' Kyats',
             'view' => $this->view_count,
             'created_at' => $this->created_at->format('d-M-Y H:i:s'),
             'updated_at' => $this->updated_at->format('d-M-Y H:i:s'),

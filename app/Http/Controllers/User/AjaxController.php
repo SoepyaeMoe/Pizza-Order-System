@@ -81,11 +81,11 @@ class AjaxController extends Controller
 
     public function plus(Request $request)
     {
-        $cart = Cart::where('id', $request->cart_id)->first();
+        $cart = Cart::where('id', $request->cart_id)->where('user_id', Auth::user()->id)->first();
         $cart->quantity = $request->qty;
         $cart->update();
 
-        $carts = Cart::get();
+        $carts = Cart::where('user_id', Auth::user()->id)->get();
         $sub_total = 0;
         $total_price = $cart->quantity * $cart->price;
         foreach ($carts as $c) {

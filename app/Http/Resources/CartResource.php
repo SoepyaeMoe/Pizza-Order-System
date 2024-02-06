@@ -21,7 +21,6 @@ class CartResource extends JsonResource
             'product_id' => $this->product_id,
             'quantity' => $this->quantity,
             'price' => $this->price,
-            'delievery_charge' => 3000,
             // 'sub_total' => $this->price * $this->quantity . ' Kyats',
             // 'grand_total' => $this->price * $this->quantity + 3000 . ' Kyats',
             'created_at' => $this->created_at->format('d-M-Y H:i:s'),
