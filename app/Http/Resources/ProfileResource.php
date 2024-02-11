@@ -15,10 +15,13 @@ class ProfileResource extends JsonResource
     public function toArray(Request $request): array
     {
         $image = '';
+        $hasImage;
         if ($this->image == null) {
             $image = "https://ui-avatars.com/api/?name=" . $this->name . "&color=random&background=random";
+            $hasImage = false;
         } else {
             $image = $this->image;
+            $hasImage = true;
         }
         return [
             'id' => $this->id,
@@ -26,8 +29,9 @@ class ProfileResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'image' => $image,
-            'created_at' => $this->created_at->format('d-M-Y H:i'),
-            'updated_at' => $this->updated_at->format('d-M-Y H:i'),
+            'hasImage' => $hasImage,
+            'created_at' => $this->created_at->format('d-M-Y'),
+            'updated_at' => $this->updated_at->format('d-M-Y'),
         ];
     }
 }
