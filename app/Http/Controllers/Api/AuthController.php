@@ -89,10 +89,46 @@ class AuthController extends Controller
         $user = Auth::user();
         if ($user->tokens()) {
             $user->tokens()->delete();
+            return response()->json([
+                'status' => 1,
+                'messge' => 'Logout success.',
+            ]);
         }
-        return response()->json([
-            'status' => 1,
-            'messge' => 'Logout success.',
+    }
+
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'oldPassword' => 'required|min:8|max:20',
+            'newPassword' => 'required|min:8|max:20',
+            'confirmPassword' => 'required|min:8|max:20|same:newPassword',
         ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 0,
+                'message' => $validator->errors(),
+            ]);
+        }
+
+        $user = Auth::user();
+        if (Hash::check($request->oldPassword, $user->password)) {
+            $user->password = Hash::make($request->newPassword);
+            $user->update();
+
+            return response()->json([
+                'status' => 1,
+                'message' => 'success',
+                'data' => $user,
+            ]);
+            return "true";
+        } else {
+            return response()->json([
+                'status' => 0,
+                'message' => [
+                    'oldPassword' => ['Old password incorrect.'],
+                ],
+            ]);
+        }
     }
 }

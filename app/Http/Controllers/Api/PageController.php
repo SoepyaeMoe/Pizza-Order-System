@@ -16,6 +16,8 @@ use App\Models\OrderList;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
 class PageController extends Controller
@@ -230,6 +232,7 @@ class PageController extends Controller
         ]);
     }
 
+    // contact
     public function contact(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -258,6 +261,108 @@ class PageController extends Controller
             'status' => 1,
             'message' => 'success',
             'data' => $contact,
+        ]);
+    }
+
+    // upload photo
+    public function uploadPhoto(Request $request)
+    {
+        $user = Auth::user();
+        $file = $request->file('photo');
+        if ($file) {
+
+            $validator = Validator::make($request->all(), [
+                'photo' => 'extensions:jpg,jpeg,png,wepb|max:2048',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'status' => 0,
+                    'message' => 'fail',
+                    'data' => $validator->errors(),
+                ]);
+            }
+
+            if ($user->image) {
+                Storage::delete(['public/profile_pic/' . $user->image]);
+            }
+
+            $name = $file->hashName();
+            $file->storeAs('public/profile_pic', $name);
+            $user->image = $name;
+            $user->update();
+
+            return response()->json([
+                'status' => 1,
+                'message' => 'success',
+                'data' => $name,
+            ]);
+        }
+        return;
+    }
+
+    // profile update
+    public function profileUpdate(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string',
+            'email' => 'required|email|string',
+            'phone' => 'required|min:5',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 0,
+                'message' => 'fail',
+                'data' => $validator->errors(),
+            ]);
+        }
+
+        $user = Auth::user();
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->phone = $request->phone;
+
+        $user->update();
+
+        return response()->json([
+            'status' => 1,
+            'message' => 'success',
+            'data' => $user,
+        ]);
+    }
+
+    // check password
+    public function checkPassword(Request $request)
+    {
+        $user = Auth::user();
+        if (Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => 1,
+                'message' => 'success',
+                'data' => $user,
+            ]);
+        } else {
+            return response()->json([
+                'status' => 0,
+                'message' => 'Wroung password, try again!',
+            ]);
+        }
+
+    }
+
+    // delte accound
+    public function delete()
+    {
+        $user = Auth::user();
+        if ($user->image) {
+            Storage::delete(['public/profile_pic/' . $user->image]);
+        }
+        $user->delete();
+        return response()->json([
+            'status' => 1,
+            'message' => 'success',
+            'data' => $user,
         ]);
     }
 }
